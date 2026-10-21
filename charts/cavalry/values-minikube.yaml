@@ -13,6 +13,14 @@ backend:
   # A rollout with a broken image turns Degraded after 2 minutes instead of 10
   progressDeadlineSeconds: 120
   extraEnv: []
+  # Spring Boot startup is CPU-bound: a higher limit makes rollouts much faster
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 768Mi
+      cpu: "1"
 
 notification:
   image:
@@ -20,6 +28,13 @@ notification:
     tag: "1.0.0"
     pullPolicy: IfNotPresent
   replicas: 1
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: "1"
 
 # The pre-upgrade hook would run as an Argo CD PreSync hook before PostgreSQL exists
 hooks:
