@@ -1,0 +1,44 @@
+{{- $fullname := include "cavalry.fullname" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-notification
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notification
+spec:
+  replicas: {{ .Values.notification.replicas }}
+  selector:
+    matchLabels:
+      {{- include "cavalry.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: notification
+  template:
+    metadata:
+      labels:
+        {{- include "cavalry.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: notification
+    spec:
+      containers:
+        - name: notification
+          image: "{{ .Values.notification.image.repository }}:{{ .Values.notification.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.notification.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.notification.containerPort }}
+          {{- with .Values.notification.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: SPRING_RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $fullname }}-config
+                  key: SPRING_RABBITMQ_HOST
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.notification.containerPort }}
+            {{- toYaml .Values.notification.probes.liveness | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.notification.containerPort }}
+            {{- toYaml .Values.notification.probes.readiness | nindent 12 }}

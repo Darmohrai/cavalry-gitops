@@ -1,0 +1,127 @@
+# Default values = development environment.
+# Secrets below are PLACEHOLDERS. Override real ones with --set, never commit them.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Name of a Secret created by hand (kubectl create secret ...). When set, the chart
+# does NOT render its own Secret and the "secret" block below is ignored.
+existingSecret: ""
+
+secret:
+  postgresDb: ev_charge_db
+  postgresUser: root
+  postgresPassword: changeme
+  keycloakAdmin: admin
+  keycloakAdminPassword: changeme
+
+config:
+  springProfile: prod
+
+initImage:
+  repository: busybox
+  tag: "1.36"
+
+backend:
+  image:
+    repository: cavalry-backend
+    tag: "1.0.0"          # empty -> Chart.appVersion
+    pullPolicy: IfNotPresent
+  replicas: 1
+  # Seconds without rollout progress before the Deployment (and the Argo CD app) becomes Degraded
+  progressDeadlineSeconds: 600
+  # Extra environment variables for the backend container, e.g. [{name: APP_MESSAGE, value: hi}]
+  extraEnv: []
+  containerPort: 8082
+  service:
+    type: NodePort
+    port: 8082
+    nodePort: ""          # e.g. 30082; empty = auto-assigned (allows two releases in one cluster)
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 768Mi
+      cpu: 500m
+  probes:
+    liveness:
+      initialDelaySeconds: 90
+      periodSeconds: 10
+      failureThreshold: 6
+    readiness:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 5
+
+notification:
+  image:
+    repository: notification-service
+    tag: "1.0.0"          # empty -> Chart.appVersion
+    pullPolicy: IfNotPresent
+  replicas: 1
+  containerPort: 8083
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 300m
+  probes:
+    liveness:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 5
+    readiness:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 5
+
+postgres:
+  replicas: 1
+  image:
+    repository: postgres
+    tag: 16-alpine
+    pullPolicy: IfNotPresent
+  port: 5432
+  resources: {}
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+
+rabbitmq:
+  replicas: 1
+  image:
+    repository: rabbitmq
+    tag: 3.13-management-alpine
+    pullPolicy: IfNotPresent
+  amqpPort: 5672
+  managementPort: 15672
+  resources: {}
+
+keycloak:
+  replicas: 1
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "26.0.7"
+    pullPolicy: IfNotPresent
+  port: 8080
+  realm: ev-network      # must match "realm" in files/realm-export.json
+  resources: {}
+
+# Helm hooks. Argo CD runs pre-upgrade as a PreSync hook on EVERY sync (including the first one)
+hooks:
+  preUpgrade:
+    enabled: true
+
+# Pod for "helm test" (only meaningful with plain Helm, Argo CD does not run test hooks)
+tests:
+  enabled: true
+
+ingress:
+  enabled: false
+  className: nginx
+  host: cavalry.local
+  annotations: {}

@@ -1,0 +1,30 @@
+# Values for the local minikube cluster managed by Argo CD.
+# Applied on top of values.yaml (see argocd-apps/cavalry.yaml -> helm.valueFiles).
+# No passwords here: the Secret "cavalry-secret" is created by hand, see README.md.
+
+existingSecret: cavalry-secret
+
+backend:
+  image:
+    repository: ghcr.io/darmohrai/cavalry/cavalry-backend
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  # A rollout with a broken image turns Degraded after 2 minutes instead of 10
+  progressDeadlineSeconds: 120
+  extraEnv: []
+
+notification:
+  image:
+    repository: ghcr.io/darmohrai/cavalry/notification-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+# The pre-upgrade hook would run as an Argo CD PreSync hook before PostgreSQL exists
+hooks:
+  preUpgrade:
+    enabled: false
+
+tests:
+  enabled: false

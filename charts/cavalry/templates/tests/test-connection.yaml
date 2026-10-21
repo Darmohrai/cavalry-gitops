@@ -1,0 +1,28 @@
+{{- if .Values.tests.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "cavalry.fullname" . }}-test
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "keycloak realm"
+          wget -q -O /dev/null http://{{ include "cavalry.fullname" . }}-keycloak:{{ .Values.keycloak.port }}/realms/{{ .Values.keycloak.realm }}/.well-known/openid-configuration
+          echo "backend"
+          nc -z -w 5 {{ include "cavalry.fullname" . }}-backend {{ .Values.backend.service.port }}
+          echo "rabbitmq"
+          nc -z -w 5 {{ include "cavalry.fullname" . }}-rabbitmq {{ .Values.rabbitmq.amqpPort }}
+          echo "all checks passed"
+{{- end }}

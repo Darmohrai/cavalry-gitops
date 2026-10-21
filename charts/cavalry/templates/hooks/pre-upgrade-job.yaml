@@ -1,0 +1,35 @@
+{{- if .Values.hooks.preUpgrade.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cavalry.fullname" . }}-pre-upgrade
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        {{- include "cavalry.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: pre-upgrade
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: check-database
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "pre-upgrade: checking that PostgreSQL accepts connections"
+              for i in $(seq 1 15); do
+                pg_isready -h {{ include "cavalry.fullname" . }}-postgres -p {{ .Values.postgres.port }} && exit 0
+                sleep 2
+              done
+              echo "database is not ready, aborting upgrade"
+              exit 1
+{{- end }}

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cavalry.fullname" . }}-postgres
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: {{ .Values.postgres.port }}
+  selector:
+    {{- include "cavalry.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres

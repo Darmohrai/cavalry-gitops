@@ -1,0 +1,25 @@
+# Cavalry application: Helm chart from charts/cavalry rendered with values-minikube.yaml.
+# The Application name becomes the Helm release name, so objects are called cavalry-*.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cavalry
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Darmohrai/cavalry-gitops.git
+    targetRevision: main
+    path: charts/cavalry
+    helm:
+      valueFiles:
+        - values-minikube.yaml   # relative to the chart directory (path)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cavalry
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false            # switched to true in step 6a
+    syncOptions:
+      - CreateNamespace=true
