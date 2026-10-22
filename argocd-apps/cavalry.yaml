@@ -20,6 +20,6 @@ spec:
   syncPolicy:
     automated:
       prune: true
-      selfHeal: false            # switched to true in step 6a
+      selfHeal: true             # revert manual changes in the cluster
     syncOptions:
       - CreateNamespace=true
