@@ -7,14 +7,12 @@ existingSecret: cavalry-secret
 backend:
   image:
     repository: ghcr.io/darmohrai/cavalry/cavalry-backend
-    tag: "1.1.0"
+    tag: "1.0.0"
     pullPolicy: IfNotPresent
   replicas: 1
   # A rollout with a broken image turns Degraded after 2 minutes instead of 10
   progressDeadlineSeconds: 120
-  extraEnv:
-    - name: APP_MESSAGE
-      value: "Hello from Git"
+  extraEnv: []
   # Spring Boot startup is CPU-bound: a higher limit makes rollouts much faster
   resources:
     requests:
