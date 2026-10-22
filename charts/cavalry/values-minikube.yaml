@@ -12,7 +12,9 @@ backend:
   replicas: 1
   # A rollout with a broken image turns Degraded after 2 minutes instead of 10
   progressDeadlineSeconds: 120
-  extraEnv: []
+  extraEnv:
+    - name: APP_MESSAGE
+      value: "Hello from Git"
   # Spring Boot startup is CPU-bound: a higher limit makes rollouts much faster
   resources:
     requests:
