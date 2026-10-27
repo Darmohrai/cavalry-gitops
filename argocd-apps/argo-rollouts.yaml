@@ -1,0 +1,25 @@
+# Argo Rollouts controller (Lab 6), installed from Git like the application itself.
+# root picks this file up automatically (App of Apps). The chart also installs the CRDs
+# Rollout, AnalysisTemplate, AnalysisRun, Experiment, ClusterAnalysisTemplate.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-rollouts
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"     # created by root before the cavalry Application
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-rollouts
+    targetRevision: 2.43.8                 # helm search repo argo/argo-rollouts
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-rollouts
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

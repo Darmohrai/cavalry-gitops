@@ -21,5 +21,22 @@ spec:
     automated:
       prune: true
       selfHeal: false            # switched to true in step 6a
+    # Lab 6: if this app is synced before the Argo Rollouts CRDs exist ("no matches for kind Rollout"),
+    # Argo CD retries instead of stopping at SyncFailed: 10s, 20s, 40s, 80s, 160s.
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
     syncOptions:
       - CreateNamespace=true
+      # Do not fail the dry run for kinds whose CRD is not installed yet (Rollout)
+      - SkipDryRunOnMissingResource=true
+  # Blue-green only: the Rollouts controller adds rollouts-pod-template-hash to the Service selector.
+  # Ignored so that it never shows up as OutOfSync (harmless for canary).
+  ignoreDifferences:
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /spec/selector/rollouts-pod-template-hash
