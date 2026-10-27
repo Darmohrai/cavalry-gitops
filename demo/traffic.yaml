@@ -1,0 +1,37 @@
+# Lab 6: request loop INSIDE the cluster (port-forward always hits a single pod and shows no split).
+# Not managed by Argo CD (not under charts/ or argocd-apps/), applied by hand only for the demo:
+#   kubectl apply -f demo/traffic.yaml
+#   kubectl -n cavalry logs -f traffic
+#   kubectl -n cavalry delete pod traffic
+# Every line = 10 requests to the Service cavalry-backend, one version per request.
+# "$$(" is a literal "$(" for the shell (Kubernetes would try to expand "$(...)" itself).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: traffic
+  namespace: cavalry
+spec:
+  restartPolicy: Never
+  containers:
+    - name: curl
+      image: curlimages/curl:8.11.1
+      command:
+        - sh
+        - -c
+        - |
+          while true; do
+            line=""
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              v=$$(curl -s -m 2 http://cavalry-backend:8082/version | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+              line="$line ${v:-ERR}"
+            done
+            echo "$$(date +%H:%M:%S) $line"
+            sleep 1
+          done
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 100m
+          memory: 32Mi

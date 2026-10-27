@@ -9,14 +9,38 @@ backend:
     repository: ghcr.io/darmohrai/cavalry/cavalry-backend
     tag: "1.1.0"
     pullPolicy: IfNotPresent
-  replicas: 1
-  # A rollout with a broken image turns Degraded after 2 minutes instead of 10
-  progressDeadlineSeconds: 120
+  # Lab 6: at least 4 replicas so the ratio of versions is visible (5 -> one pod = 20%)
+  replicas: 5
+  # A rollout with a broken image turns Degraded after 5 minutes instead of 10.
+  # (120 s in Lab 5; raised so that slow Spring Boot starts during canary steps are not reported as Degraded)
+  progressDeadlineSeconds: 300
   extraEnv: []
-  # Spring Boot startup is CPU-bound: a higher limit makes rollouts much faster
+  # Lab 6: Rollout instead of Deployment, canary strategy.
+  # Without a service mesh / ingress traffic router the weight is the share of pods:
+  # 5 replicas -> 20% = 1 new pod, 60% = 3, 80% = 4. The Service balances requests over all pods.
+  rollout:
+    enabled: true
+    strategy:
+      canary:
+        steps:
+          - setWeight: 20
+          - pause: {}                 # manual gate: wait for "kubectl argo rollouts promote"
+          - setWeight: 60
+          - pause: {duration: 30s}
+          - setWeight: 80
+          - pause: {duration: 30s}
+      # Blue-green alternative: replace the whole "canary:" block with the lines below
+      # (the Service cavalry-backend-preview is then rendered automatically).
+      # blueGreen:
+      #   activeService: cavalry-backend
+      #   previewService: cavalry-backend-preview
+      #   autoPromotionEnabled: false
+      #   scaleDownDelaySeconds: 30
+  # Spring Boot startup is CPU-bound: a higher limit makes rollouts much faster.
+  # Memory request 384Mi (was 512Mi) so that 5-6 backend pods fit into the 6 GB minikube node.
   resources:
     requests:
-      memory: 512Mi
+      memory: 384Mi
       cpu: 250m
     limits:
       memory: 768Mi

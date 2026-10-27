@@ -32,6 +32,15 @@ backend:
   progressDeadlineSeconds: 600
   # Extra environment variables for the backend container, e.g. [{name: APP_MESSAGE, value: hi}]
   extraEnv: []
+  # Argo Rollouts (Lab 6). enabled: true renders a Rollout (templates/backend-rollout.yaml) instead
+  # of the Deployment; requires the Argo Rollouts controller and CRDs in the cluster.
+  rollout:
+    enabled: false
+    revisionHistoryLimit: 3
+    # Copied as-is into Rollout.spec.strategy: {canary: ...} or {blueGreen: ...}, see values-minikube.yaml.
+    # blueGreen also renders the Service <release>-backend-preview (templates/backend-service-preview.yaml).
+    # Empty here on purpose: Helm merges maps, so a default canary would mix with a blueGreen override.
+    strategy: {}
   containerPort: 8082
   service:
     type: NodePort

@@ -8,14 +8,18 @@ cavalry-gitops/
 ├── bootstrap/
 │   └── root.yaml              # root Application (App of Apps), applied by hand once
 ├── argocd-apps/               # Applications managed by root
+│   ├── argo-rollouts.yaml     # Argo Rollouts controller + CRDs (Helm chart, sync-wave -1)
 │   └── cavalry.yaml
-└── charts/
-    └── cavalry/               # Helm chart from Lab 4
-        ├── Chart.yaml
-        ├── values.yaml
-        ├── values-minikube.yaml   # values for the minikube cluster (no passwords)
-        ├── files/realm-export.json
-        └── templates/
+├── charts/
+│   └── cavalry/               # Helm chart from Lab 4
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       ├── values-minikube.yaml   # values for the minikube cluster (no passwords, canary strategy)
+│       ├── files/realm-export.json
+│       └── templates/             # backend-rollout.yaml replaces backend-deployment.yaml when
+│                                  # backend.rollout.enabled is true
+└── demo/
+    └── traffic.yaml           # request loop inside the cluster for the canary demo (applied by hand)
 ```
 
 ## Images
@@ -55,4 +59,14 @@ kubectl apply -f bootstrap/root.yaml
 Everything else comes from Git. A new application or cluster component is added with
 one more file in `argocd-apps/`.
 
-Step-by-step lab guide with every command: [LAB5.md](LAB5.md).
+## Progressive delivery (Lab 6)
+
+The backend is a `Rollout` managed by [Argo Rollouts](https://argo-rollouts.readthedocs.io/) with a
+canary strategy (5 replicas, steps 20% → manual pause → 60% → 30s → 80% → 30s → 100%).
+A release is still a commit that changes `backend.image.tag`; it is then promoted or aborted with
+`kubectl argo rollouts promote|abort cavalry-backend -n cavalry` or from the Argo CD UI.
+
+## Lab guides
+
+- [LAB5.md](LAB5.md): GitOps with Argo CD, every command
+- [LAB6.md](LAB6.md): canary releases with Argo Rollouts, every command

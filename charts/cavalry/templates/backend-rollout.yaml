@@ -1,0 +1,24 @@
+{{- /* Argo Rollouts: progressive delivery of the backend (Lab 6). Needs the Argo Rollouts
+       controller and its CRDs in the cluster (argocd-apps/argo-rollouts.yaml). */ -}}
+{{- if .Values.backend.rollout.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "cavalry.fullname" . }}-backend
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  revisionHistoryLimit: {{ .Values.backend.rollout.revisionHistoryLimit }}
+  progressDeadlineSeconds: {{ .Values.backend.progressDeadlineSeconds }}
+  selector:
+    matchLabels:
+      {{- include "cavalry.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  # Same pod template as the Deployment: a new release starts only when it changes (image, env, labels)
+  template:
+    {{- include "cavalry.backend.podTemplate" . | nindent 4 }}
+  strategy:
+    {{- toYaml .Values.backend.rollout.strategy | nindent 4 }}
+{{- end }}
