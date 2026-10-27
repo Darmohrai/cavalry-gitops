@@ -291,9 +291,9 @@ docker pull ghcr.io/darmohrai/cavalry/cavalry-backend:1.4.0
 Щоб на захисті не чекати завантаження образів, можна заздалегідь підтягнути їх у minikube:
 
 ```powershell
-minikube ssh -- docker pull ghcr.io/darmohrai/cavalry/cavalry-backend:1.2.0
-minikube ssh -- docker pull ghcr.io/darmohrai/cavalry/cavalry-backend:1.3.0
-minikube ssh -- docker pull ghcr.io/darmohrai/cavalry/cavalry-backend:1.4.0
+minikube image pull ghcr.io/darmohrai/cavalry/cavalry-backend:1.2.0
+minikube image pull ghcr.io/darmohrai/cavalry/cavalry-backend:1.3.0
+minikube image pull ghcr.io/darmohrai/cavalry/cavalry-backend:1.4.0
 ```
 
 (`pullPolicy: IfNotPresent`, тож kubelet візьме вже наявний образ.)
@@ -670,7 +670,7 @@ kubectl argo rollouts get rollout cavalry-backend -n cavalry --watch     # ✔ H
 | Цикл запитів показує тільки одну версію | Запити через `port-forward` (один под) | Цикл у поді всередині кластера (`demo/traffic.yaml`) |
 | Реліз не стартує після зміни values | Rollout стартує лише при зміні **шаблону пода** (образ, змінні, мітки), а не `replicas` чи `strategy` | Змінити тег образу або `extraEnv` |
 | Canary-под `Pending` | Не вистачає пам'яті/CPU на вузлі | `kubectl -n cavalry describe pod <под>`; зупинити зайві контейнери Docker; зменшити `replicas` до 4 |
-| Canary-под довго `0/1`, Rollout `Degraded: ProgressDeadlineExceeded` | Spring Boot не встиг стартувати за 300 с (мало CPU) або образ не тягнеться | `kubectl -n cavalry describe pod`; образ заздалегідь `minikube ssh -- docker pull ...`; `kubectl argo rollouts retry rollout cavalry-backend -n cavalry` |
+| Canary-под довго `0/1`, Rollout `Degraded: ProgressDeadlineExceeded` | Spring Boot не встиг стартувати за 300 с (мало CPU) або образ не тягнеться | `kubectl -n cavalry describe pod`; образ заздалегідь `minikube image pull ...`; `kubectl argo rollouts retry rollout cavalry-backend -n cavalry` |
 | `kubectl: unknown command "argo"` | Плагін не в PATH | Розділ 5.2; новий термінал |
 | `ImagePullBackOff` на 1.2.0/1.3.0 | Образ ще не зібраний (workflow не завершився) | GitHub → Actions → `Release images`; `docker pull ...` |
 | Після abort Argo CD `Synced / Degraded` | Так і має бути: Git просить 1.3.0, а працює 1.2.0 | `git revert` коміту з 1.3.0, push (розділ 7.3) |
