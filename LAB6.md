@@ -51,6 +51,16 @@
 
 Додатково (не обов'язково, але готово): у чарті є шаблон preview-сервісу для blue-green, тож стратегію можна переключити однією зміною `values-minikube.yaml` (розділ 8).
 
+**Генеральна репетиція 28.10.2026** (весь сценарій розділу 7 на живому кластері, коміти лишились в історії `main`):
+
+| Коміт | Що перевірено | Результат |
+|---|---|---|
+| `e0e6987` Release cavalry 1.2.0 | реліз комітом → ручна пауза | пауза `Step 1/6` через ≈ 70 с; поди 1 : 4; Argo CD `Synced / Suspended`; у циклі запитів 15 з 80 відповідей `1.2.0` (≈ 19 %) |
+| | `promote` | 60 % → пауза 30 с → 80 % → пауза 30 с → 100 %, `Healthy` через ≈ 4,5 хв; Argo CD `Synced / Healthy`; лише `1.2.0` |
+| `a8b07c3` Release cavalry 1.3.0 | реліз → `abort` на першій паузі | трафік одразу лише `1.2.0`; Rollout `Degraded` (`RolloutAborted`); Argo CD `Synced / Degraded` |
+| `b0d5c2e` Revert "Release cavalry 1.3.0" | відкат через Git | за ≈ 5 с `Synced / Healthy`, нових подів не створено |
+| `Reset cavalry to 1.1.0 ...` | повернення у стартовий стан (розділ 9) | `promote --full`, стартовий стан `1.1.0` |
+
 ---
 
 ## 2. Як усе влаштовано
@@ -559,7 +569,7 @@ kubectl argo rollouts abort cavalry-backend -n cavalry
 
 (UI Argo CD: Rollout → **⋮** → **Abort**; або кнопка Abort у дашборді.)
 
-Контролер одразу масштабує canary-ReplicaSet до 0 і повертає stable до 5 подів.
+Контролер одразу масштабує canary-ReplicaSet до 0 і повертає stable до 5 подів. Кілька секунд після abort може бути `Ready: 4` (п'ятий stable-под ще стартує), трафік при цьому вже повністю йде на stable.
 
 ```powershell
 kubectl argo rollouts get rollout cavalry-backend -n cavalry
@@ -676,6 +686,22 @@ kubectl argo rollouts get rollout cavalry-backend -n cavalry --watch     # ✔ H
 | Після abort Argo CD `Synced / Degraded` | Так і має бути: Git просить 1.3.0, а працює 1.2.0 | `git revert` коміту з 1.3.0, push (розділ 7.3) |
 | Blue-green: вічний `OutOfSync` на Service | Контролер дописує мітку в селектор | `ignoreDifferences` уже додано в `argocd-apps/cavalry.yaml` |
 | Дашборд `localhost:3100` порожній | Вибрано інший namespace | Вгорі дашборду вибрати `cavalry` |
+| `docker version` висить, `minikube status` → `unknown state` | Docker Desktop завис (часто після сну/гібернації ПК) | Закрити Docker Desktop (трей → Quit, або завершити процеси `Docker Desktop` і `com.docker.backend`), `wsl --terminate docker-desktop`, запустити знову, далі `minikube start` |
+| Після `minikube start` поди бекенда `Unknown` / `0/1` | Поди відновлюються після рестарту вузла, Spring Boot стартує ≈ 1–2 хв | `kubectl argo rollouts status cavalry-backend -n cavalry --timeout 10m` |
+| `argocd login`: `Invalid username or password` | Пароль `admin` змінювали не на `cavalry-argo-2026` | Скинути пароль (нижче) |
+| `git revert` не створив коміт | Зайвий прапорець (наприклад `-q`, якого в `git revert` немає) | Рівно `git revert --no-edit HEAD`, потім `git log --oneline -3` |
+
+Скидання пароля `admin` в Argo CD на `cavalry-argo-2026` (PowerShell):
+
+```powershell
+$hash = argocd account bcrypt --password cavalry-argo-2026
+$now  = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+@{ stringData = @{ 'admin.password' = $hash; 'admin.passwordMtime' = $now } } | ConvertTo-Json -Compress | Set-Content -Encoding ascii "$env:TEMP\argocd-pass.json"
+kubectl -n argocd patch secret argocd-secret --patch-file "$env:TEMP\argocd-pass.json"
+kubectl -n argocd rollout restart deployment argocd-server
+```
+
+Поки пароля немає, усе з розділу 7 можна показати без `argocd` CLI: стан застосунку `kubectl -n argocd get application cavalry` (колонки SYNC STATUS / HEALTH STATUS), Refresh `kubectl -n argocd annotate application cavalry argocd.argoproj.io/refresh=normal --overwrite`.
 
 ---
 
