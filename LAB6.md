@@ -734,3 +734,7 @@ kubectl -n argocd rollout restart deployment argocd-server
 **Що таке AnalysisTemplate?** CRD Argo Rollouts для автоматичної перевірки на кроці canary: запит до Prometheus, вебхук, Job. Якщо метрика погана, Rollout сам робить abort. У цій роботі перевірка ручна (`pause: {}`), автоматичний аналіз — наступний крок разом з моніторингом.
 
 **Чому відповіді двох версій безпечні для БД?** Обидві версії працюють з тією самою схемою PostgreSQL і тими самими чергами RabbitMQ, а 1.2.0–1.4.0 відрізняються лише вшитим номером версії. У реальному проєкті міграції БД при canary роблять зворотно сумісними (expand → migrate → contract).
+
+
+
+https://claude.ai/artifact/3iFwMEkUXFB39u3B3o8hrQ#3b0237d1-7261.mjp6mwkaff8.8975
