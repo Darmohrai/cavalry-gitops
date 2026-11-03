@@ -1,0 +1,61 @@
+# Lab 7: kube-prometheus-stack = Prometheus Operator + Prometheus + Alertmanager + Grafana
+# + kube-state-metrics + node-exporter. Installed from Git by root (App of Apps).
+# The Application name becomes the Helm release name; fullnameOverride gives short service names:
+#   kps-prometheus:9090, kps-grafana:80, kps-alertmanager:9093
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kps
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"     # before cavalry: the ServiceMonitor/PrometheusRule CRDs must exist
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 92.17.1                # helm search repo prometheus-community/kube-prometheus-stack
+    helm:
+      valuesObject:
+        fullnameOverride: kps
+        # control plane components of minikube are not reachable for scraping: disabled to avoid noise
+        kubeEtcd: {enabled: false}
+        kubeControllerManager: {enabled: false}
+        kubeScheduler: {enabled: false}
+        kubeProxy: {enabled: false}
+        # fewer moving parts: no admission webhook and its TLS jobs
+        prometheusOperator:
+          admissionWebhooks: {enabled: false}
+          tls: {enabled: false}
+        prometheus:
+          prometheusSpec:
+            retention: 2d
+            # pick up ServiceMonitor / PodMonitor / PrometheusRule from every namespace without
+            # the "release: kps" label (our chart lives in namespace cavalry)
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+        grafana:
+          admin:
+            # Secret created by hand (README.md): the chart would generate a new random password
+            # on every Argo CD render otherwise
+            existingSecret: grafana-admin
+            userKey: admin-user
+            passwordKey: admin-password
+          sidecar:
+            dashboards:
+              searchNamespace: ALL         # find ConfigMaps labelled grafana_dashboard="1" in every namespace
+          additionalDataSources:
+            - name: Loki
+              uid: loki
+              type: loki
+              access: proxy
+              url: http://loki-gateway.monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true               # the CRDs of this chart are too large for client-side apply
