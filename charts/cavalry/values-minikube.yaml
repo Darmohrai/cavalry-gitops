@@ -5,10 +5,10 @@
 existingSecret: cavalry-secret
 
 backend:
+  # Lab 7: 1.5.0 = first image with /actuator/prometheus, JSON logs and FAIL_RATE
+  # (branch lab7-observability of the application repository); 1.6.0 = same code, for the "good release" demo
   image:
     repository: ghcr.io/darmohrai/cavalry/cavalry-backend
-    # Lab 7: 1.5.0 = first image with /actuator/prometheus, JSON logs and FAIL_RATE
-    # (branch lab7-observability of the application repository)
     tag: "1.5.0"
     pullPolicy: IfNotPresent
   # Lab 6: at least 4 replicas so the ratio of versions is visible (5 -> one pod = 20%)
@@ -84,6 +84,9 @@ metrics:
   enabled: true
   alerts:
     enabled: true
+    # 30s instead of 1m: the canary is aborted ~90 s after the first errors, a 1m alert could
+    # still be Pending at that moment
+    for: 30s
 
 # The pre-upgrade hook would run as an Argo CD PreSync hook before PostgreSQL exists
 hooks:
