@@ -1,0 +1,30 @@
+# Lab 7: constant background traffic to the backend (~20 req/s per replica), namespace default,
+# NOT managed by Argo CD (applied by hand for the demo):
+#   kubectl apply -f demo/load.yaml
+#   kubectl scale deployment load --replicas=3     # more traffic
+#   kubectl delete -f demo/load.yaml               # stop
+# The canary analysis needs this traffic: without requests the query is 0/0 = NaN and the
+# AnalysisRun fails even for a good version.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: load}
+  template:
+    metadata:
+      labels: {app: load}
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - while true; do curl -s -o /dev/null -m 2 http://cavalry-backend.cavalry.svc:8082/version; sleep 0.05; done
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 200m, memory: 32Mi}

@@ -7,37 +7,56 @@ existingSecret: cavalry-secret
 backend:
   image:
     repository: ghcr.io/darmohrai/cavalry/cavalry-backend
-    tag: "1.3.0"
+    # Lab 7: 1.5.0 = first image with /actuator/prometheus, JSON logs and FAIL_RATE
+    # (branch lab7-observability of the application repository)
+    tag: "1.5.0"
     pullPolicy: IfNotPresent
   # Lab 6: at least 4 replicas so the ratio of versions is visible (5 -> one pod = 20%)
   replicas: 5
   # A rollout with a broken image turns Degraded after 5 minutes instead of 10.
   # (120 s in Lab 5; raised so that slow Spring Boot starts during canary steps are not reported as Degraded)
   progressDeadlineSeconds: 300
-  extraEnv: []
+  # Lab 7: FAIL_RATE = share of requests answered with HTTP 500 (0..1). "0.5" = bad release demo.
+  # Changing it changes the pod template, so it is rolled out as a new canary like a new image.
+  extraEnv:
+    - name: FAIL_RATE
+      value: "0"
   # Lab 6: Rollout instead of Deployment, canary strategy.
   # Without a service mesh / ingress traffic router the weight is the share of pods:
   # 5 replicas -> 20% = 1 new pod, 60% = 3, 80% = 4. The Service balances requests over all pods.
   rollout:
     enabled: true
+    # Lab 7: the manual pause of Lab 6 is replaced by the analysis step: Prometheus decides.
+    # One canary pod out of 5 answering 500 to half of its requests = ~10% errors -> below 95% -> abort.
+    analysis:
+      enabled: true
+      prometheusAddress: http://kps-prometheus.monitoring:9090
+      selector: 'namespace="cavalry",service="cavalry-backend",uri!~"/actuator.*"'
     strategy:
       canary:
         steps:
           - setWeight: 20
-          - pause: {}                 # manual gate: wait for "kubectl argo rollouts promote"
+          - pause: {duration: 60s}    # let metrics of the canary pod accumulate (rate over [1m])
+          - analysis:
+              templates:
+                - templateName: cavalry-success-rate
           - setWeight: 60
           - pause: {duration: 30s}
           - setWeight: 80
           - pause: {duration: 30s}
       # Blue-green alternative: replace the whole "canary:" block with the lines below
-      # (the Service cavalry-backend-preview is then rendered automatically).
+      # (the Service cavalry-backend-preview is then rendered automatically) and set
+      # analysis.selector to 'service="cavalry-backend-preview",uri!~"/actuator.*"'.
       # blueGreen:
       #   activeService: cavalry-backend
       #   previewService: cavalry-backend-preview
-      #   autoPromotionEnabled: false
+      #   autoPromotionEnabled: true
       #   scaleDownDelaySeconds: 30
+      #   prePromotionAnalysis:
+      #     templates:
+      #       - templateName: cavalry-success-rate
   # Spring Boot startup is CPU-bound: a higher limit makes rollouts much faster.
-  # Memory request 384Mi (was 512Mi) so that 5-6 backend pods fit into the 6 GB minikube node.
+  # Memory request 384Mi (was 512Mi) so that 5-6 backend pods fit next to the monitoring stack.
   resources:
     requests:
       memory: 384Mi
@@ -59,6 +78,12 @@ notification:
     limits:
       memory: 512Mi
       cpu: "1"
+
+# Lab 7: ServiceMonitor, Grafana dashboard (ConfigMap grafana_dashboard="1") and the 5xx alert
+metrics:
+  enabled: true
+  alerts:
+    enabled: true
 
 # The pre-upgrade hook would run as an Argo CD PreSync hook before PostgreSQL exists
 hooks:

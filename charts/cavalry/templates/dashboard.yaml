@@ -1,0 +1,15 @@
+{{- /* Lab 7: Grafana dashboard delivered from Git. The Grafana sidecar (kps, searchNamespace: ALL)
+       loads every ConfigMap labelled grafana_dashboard="1". The JSON is exported from Grafana
+       (Share -> Export -> Save to file) into dashboards/cavalry.json. */ -}}
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cavalry.fullname" . }}-dashboard
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  cavalry.json: |-
+{{ .Files.Get "dashboards/cavalry.json" | indent 4 }}
+{{- end }}

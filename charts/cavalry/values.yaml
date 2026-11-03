@@ -41,6 +41,18 @@ backend:
     # blueGreen also renders the Service <release>-backend-preview (templates/backend-service-preview.yaml).
     # Empty here on purpose: Helm merges maps, so a default canary would mix with a blueGreen override.
     strategy: {}
+    # Lab 7: AnalysisTemplate <release>-success-rate (templates/analysistemplate.yaml).
+    # Reference it from a canary step "analysis" or from blueGreen.prePromotionAnalysis.
+    analysis:
+      enabled: false
+      prometheusAddress: http://kps-prometheus.monitoring:9090
+      # label filter of the PromQL query: canary = the whole Service, blue-green = the preview Service.
+      # /actuator/** (Prometheus scrapes) is excluded: it never fails and would hide errors
+      selector: 'namespace="cavalry",service="cavalry-backend",uri!~"/actuator.*"'
+      successThreshold: 0.95
+      interval: 30s
+      count: 4
+      failureLimit: 1
   containerPort: 8082
   service:
     type: NodePort
@@ -128,6 +140,16 @@ hooks:
 # Pod for "helm test" (only meaningful with plain Helm, Argo CD does not run test hooks)
 tests:
   enabled: true
+
+# Lab 7: observability of the backend. Needs kube-prometheus-stack in the cluster (CRDs
+# ServiceMonitor / PrometheusRule): ServiceMonitor, Grafana dashboard ConfigMap, alert rule.
+metrics:
+  enabled: false
+  path: /actuator/prometheus     # Spring Boot Actuator + micrometer-registry-prometheus
+  interval: 15s
+  alerts:
+    enabled: false
+    for: 1m
 
 ingress:
   enabled: false

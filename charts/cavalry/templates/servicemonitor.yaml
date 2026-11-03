@@ -1,0 +1,25 @@
+{{- /* Lab 7: tells the Prometheus Operator to scrape the backend pods behind Service <release>-backend.
+       Needs the CRD from kube-prometheus-stack (argocd-apps/kps.yaml). Prometheus adds the labels
+       namespace, service, pod, container to every series. */ -}}
+{{- if .Values.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cavalry.fullname" . }}-backend
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  selector:
+    matchLabels:
+      {{- include "cavalry.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  # copies the pod label set by Argo Rollouts into every series: rollouts_pod_template_hash
+  # tells the stable and the canary ReplicaSet apart on the dashboard
+  podTargetLabels:
+    - rollouts-pod-template-hash
+  endpoints:
+    - port: http
+      path: {{ .Values.metrics.path }}
+      interval: {{ .Values.metrics.interval }}
+{{- end }}

@@ -1,0 +1,25 @@
+{{- /* Lab 7 (d, optional): alert when more than 5 % of backend responses are 5xx for 1 minute.
+       Visible in Prometheus -> Alerts (Pending -> Firing) and in Alertmanager (svc/kps-alertmanager:9093). */ -}}
+{{- if and .Values.metrics.enabled .Values.metrics.alerts.enabled }}
+{{- $sel := printf "namespace=\"%s\",service=\"%s-backend\",uri!~\"/actuator.*\"" .Release.Namespace (include "cavalry.fullname" .) }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "cavalry.fullname" . }}-alerts
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: cavalry
+      rules:
+        - alert: CavalryHighErrorRate
+          expr: |
+            sum(rate(http_server_requests_seconds_count{ {{- $sel -}},status=~"5.."}[1m]))
+              / sum(rate(http_server_requests_seconds_count{ {{- $sel -}} }[1m])) > 0.05
+          for: {{ .Values.metrics.alerts.for }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "cavalry-backend: more than 5% of responses are 5xx"
+            description: "{{ "{{" }} $value | humanizePercentage {{ "}}" }} of requests to cavalry-backend failed in the last minute."
+{{- end }}

@@ -1,0 +1,28 @@
+{{- /* Lab 7: the canary step "analysis" asks Prometheus for the share of successful (non-5xx) requests.
+       4 measurements every 30 s; the second measurement below 95 % fails the AnalysisRun, and
+       Argo Rollouts aborts the release (traffic back to stable). The label filter comes from values,
+       so the same template works for canary (whole Service) and blue-green (preview Service). */ -}}
+{{- if and .Values.backend.rollout.enabled .Values.backend.rollout.analysis.enabled }}
+{{- $a := .Values.backend.rollout.analysis }}
+{{- $sel := $a.selector }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "cavalry.fullname" . }}-success-rate
+  labels:
+    {{- include "cavalry.labels" . | nindent 4 }}
+spec:
+  metrics:
+    - name: success-rate
+      interval: {{ $a.interval }}
+      count: {{ $a.count }}
+      failureLimit: {{ $a.failureLimit }}
+      successCondition: result[0] >= {{ $a.successThreshold }}
+      provider:
+        prometheus:
+          address: {{ $a.prometheusAddress }}
+          query: |
+            sum(rate(http_server_requests_seconds_count{ {{- $sel -}},status!~"5.."}[1m]))
+            /
+            sum(rate(http_server_requests_seconds_count{ {{- $sel -}} }[1m]))
+{{- end }}
