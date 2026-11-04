@@ -9,7 +9,7 @@ backend:
   # (branch lab7-observability of the application repository); 1.6.0 = same code, for the "good release" demo
   image:
     repository: ghcr.io/darmohrai/cavalry/cavalry-backend
-    tag: "1.5.0"
+    tag: "1.6.0"
     pullPolicy: IfNotPresent
   # Lab 6: at least 4 replicas so the ratio of versions is visible (5 -> one pod = 20%)
   replicas: 5
