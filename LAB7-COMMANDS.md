@@ -34,13 +34,12 @@ $p = kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.dat
 | Т5 | `kubectl -n cavalry get analysisrun -w` | AnalysisRun-и наживо |
 | Т6 | робоче вікно, див. нижче | git і команди |
 
-У **Т6** спочатку вставити функції (один раз):
+У **Т6** спочатку підключити функції (у кожному **новому** вікні PowerShell — заново):
 ```powershell
 cd D:\uni\Java\cavalry-gitops; git pull
-function Set-BackendTag([string]$Tag) { $f='charts\cavalry\values-minikube.yaml'; $t=[IO.File]::ReadAllText((Resolve-Path $f)); $t=$t -replace '(cavalry-backend\r?\n\s+tag: )"[^"]*"', ('${1}"'+$Tag+'"'); [IO.File]::WriteAllText((Resolve-Path $f),$t) }
-function Set-FailRate([string]$Rate) { $f='charts\cavalry\values-minikube.yaml'; $t=[IO.File]::ReadAllText((Resolve-Path $f)); $t=$t -replace '(name: FAIL_RATE\r?\n\s+value: )"[^"]*"', ('${1}"'+$Rate+'"'); [IO.File]::WriteAllText((Resolve-Path $f),$t) }
-function Sync-Now { kubectl -n argocd annotate application cavalry argocd.argoproj.io/refresh=normal --overwrite | Out-Null }
+. .\lab7-functions.ps1       # крапка, пробіл, шлях; має написати "Loaded: Set-BackendTag, Set-FailRate, Sync-Now"
 ```
+Якщо PowerShell скаже, що скрипти заборонені: `Set-ExecutionPolicy -Scope Process Bypass`, потім знову `. .\lab7-functions.ps1`.
 - `Set-BackendTag` — міняє тег образу бекенду у values (новий реліз).
 - `Set-FailRate` — міняє `FAIL_RATE` (частка штучних 500-х).
 - `Sync-Now` — Argo CD одразу перечитує Git, без очікування 3 хв.
