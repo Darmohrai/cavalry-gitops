@@ -20,7 +20,7 @@ backend:
   # Changing it changes the pod template, so it is rolled out as a new canary like a new image.
   extraEnv:
     - name: FAIL_RATE
-      value: "0.5"
+      value: "0"
   # Lab 6: Rollout instead of Deployment, canary strategy.
   # Without a service mesh / ingress traffic router the weight is the share of pods:
   # 5 replicas -> 20% = 1 new pod, 60% = 3, 80% = 4. The Service balances requests over all pods.
