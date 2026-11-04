@@ -54,13 +54,18 @@ kubectl -n argocd get applications   # усі Synced / Healthy
 kubectl -n monitoring get pods       # усі Running
 ```
 
-**Пункт 2 — ціль UP і метрика.** Prometheus → Status → Targets: `cavalry-backend` 5/5 UP. У Query:
+**Пункт 2 — ціль UP і метрика.** Це **не PowerShell**, а браузер (потрібен запущений port-forward з вікна Т3):
+1. Відкрити http://localhost:9090 → меню **Status → Target health** (або Targets) → знайти `cavalry-backend`: 5/5 UP.
+2. Натиснути **Query** зверху, вставити в поле запит нижче → **Execute** → вкладка **Graph** (видно лінію `200`, ≈ 15–20 req/s):
 ```promql
 sum by (status) (rate(http_server_requests_seconds_count{namespace="cavalry",service="cavalry-backend"}[1m]))
 ```
+3. А це — у PowerShell (вікно Т6), показати файл:
 ```powershell
 Get-Content charts\cavalry\templates\servicemonitor.yaml   # як Prometheus знаходить бекенд
 ```
+
+> Так само всі запити ` ```promql ` вставляються в Prometheus (Query) або Grafana → Explore → Prometheus, а ` ```logql ` — у Grafana → Explore → джерело **Loki** (режим **Code**). У PowerShell — лише блоки ` ```powershell `.
 
 **Хороший реліз (запустити рано, йде ~6 хв фоном)**
 ```powershell
