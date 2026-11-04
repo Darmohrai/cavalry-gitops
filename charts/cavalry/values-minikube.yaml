@@ -57,6 +57,13 @@ backend:
       #       - templateName: cavalry-success-rate
   # Spring Boot startup is CPU-bound: a higher limit makes rollouts much faster.
   # Memory request 384Mi (was 512Mi) so that 5-6 backend pods fit next to the monitoring stack.
+  # Lab 7: next to the monitoring stack a cold start of several pods at once takes > 150 s,
+  # and the default liveness (90 s + 6 x 10 s) kept killing them. Readiness is unchanged.
+  probes:
+    liveness:
+      initialDelaySeconds: 240
+      periodSeconds: 10
+      failureThreshold: 6
   resources:
     requests:
       memory: 384Mi
